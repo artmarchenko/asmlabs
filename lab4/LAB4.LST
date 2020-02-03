@@ -1,0 +1,492 @@
+Turbo Assembler	 Version 4.1	    03/02/20 13:57:20	    Page 1
+lab4.ASM
+
+
+
+      1				     ;*	СОЗДАНИЕ СЕГМЕНТА СТЭКА *
+      2	0000			     STACKSEG SEGMENT PARA STACK "STACK"
+      3	0000  20*(0000)			      DW      32   DUP(0)
+      4	0040			     STACKSEG ENDS
+      5				     ;*	СОЗДАНИЕ СЕГМЕНТА ДАННЫХ *
+      6	0000			     DSEG SEGMENT PARA PUBLIC "DATA"
+      7	0000  0D 53 54 41 52 54	20+	 MES1 DB     0DH,"START	ARRAY  - $"
+      8	      41 52 52 41 59 20	20+
+      9	      2D 20 24
+     10	0011  0D 53 4F 52 54 45	44+	 MES2 DB     0DH,"SORTED ARRAY - $"
+     11	      20 41 52 52 41 59	20+
+     12	      2D 20 24
+     13	0022  0D 45 4C 45 4D 45	4E+	 MES3 DB     0DH,"ELEMENT SUM  - $"
+     14	      54 20 53 55 4D 20	20+
+     15	      2D 20 24
+     16	0033  0D 4D 41 58 20 45	4C+	 MES4 DB     0DH,"MAX ELEMENT  - $"
+     17	      45 4D 45 4E 54 20	20+
+     18	      2D 20 24
+     19	0044  0D 45 4E 54 45 52	20+	 MES5 DB     0DH,"ENTER	YOUR ARRAY:$"
+     20	      59 4F 55 52 20 41	52+
+     21	      52 41 59 3A 24
+     22	0057  0D 45 4E 54 45 52	20+	 MES6 DB     0DH,"ENTER	YOUR NUMBER FOR	SEARCH:$"
+     23	      59 4F 55 52 20 4E	55+
+     24	      4D 42 45 52 20 46	4F+
+     25	      52 20 53 45 41 52	43+
+     26	      48 3A 24
+     27	0076  0D 43 4F 4F 52 44	49+	 MES7 DB     0DH,"COORDINATES FOUND: $"
+     28	      4E 41 54 45 53 20	46+
+     29	      4F 55 4E 44 3A 20	24
+     30	008B  28 20 24			 MES8 DB     "(	$"
+     31	008E  20 3B 20 24		 MES9 DB     " ; $"
+     32	0092  20 29 20 24		 MES10 DB    " ) $"
+     33	0096  20 24			 MES11 DB    " $"
+     34	      =0010			 N    EQU    16
+     35	0098  11*(????)			 MAS  DW     17	DUP (?)
+     36	00BA  11*(????)			 MASCP DW    17	DUP (?)
+     37	00DC  ????			 SRCH DW     ?
+     38	00DE  ????			 TMP  DW     ?
+     39	00E0  ????			 OUTPT DW    ?
+     40	00E2  0000			 I    DW     0
+     41	00E4  0000			 J    DW     0
+     42	00E6			     DSEG ENDS
+     43
+     44				     WRT MACRO	 STRING
+     45					 MOV	 AH,9		 ; Функция вывода строки
+     46					 LEA	 DX,STRING	 ; Загружаем адрес строки
+     47					 INT	 21H		 ; Вызов прерывания DOS
+     48				     ENDM
+     49				     ;--------------------------------------------------------------------------
+     50				     ;*	СОЗДАНИЕ СЕГМЕНТА КОДА *
+     51	0000			     CSEG     SEGMENT PARA PUBLIC "CODE"
+     52				     ;*	НАЧАЛО ОСНОВНОЙ ПРОЦЕДУРЫ
+     53	0000			      MAIN    PROC    FAR
+     54					      ASSUME  CS: CSEG,	DS: DSEG, SS: STACKSEG
+     55					;* MAGIC * (РАЗМЕЩЕНИЕ ПРОГРАММЫ В ПАМЯТИ?)
+     56	0000  1E			 PUSH	  DS
+     57	0001  B8 0000			 MOV	  AX, 0
+Turbo Assembler	 Version 4.1	    03/02/20 13:57:20	    Page 2
+lab4.ASM
+
+
+
+     58	0004  50			 PUSH	  AX
+     59	0005  B8 0000s			 MOV	  AX, DSEG	 ; *ИНИЦИАЛИЗАЦИЯ СЕГМЕНТНОГО
+     60	0008  8E D8			 MOV	  DS, AX	 ;  РЕГИСРА 'DS'*
+     61					;* MAGIC END'S *
+     62
+     63					 ;ВВОД МАССИВА
+     64					WRT	 MES5
+1    65	000A  B4 09			 MOV	 AH,9		 ; Функция вывода строки
+1    66	000C  BA 0044r			 LEA	 DX,MES5       ; Загружаем адрес строки
+1    67	000F  CD 21			 INT	 21H		 ; Вызов прерывания DOS
+     68	0011  E8 0134			CALL	 KARETKA_JMP_PROC    ; ПЕРЕВЕСТИ КАРЕТКУ
+     69	0014  E8 013A			CALL	 INPUT_PROC
+     70	0017  E8 012E			CALL	 KARETKA_JMP_PROC    ; ПЕРЕВЕСТИ КАРЕТКУ
+     71					;*
+     72
+     73					WRT	 MES1		     ; ЗАЛОЖИТЬ	СООБЩЕНИЕ ДЛЯ ВЫВОДА
+1    74	001A  B4 09			 MOV	 AH,9		 ; Функция вывода строки
+1    75	001C  BA 0000r			 LEA	 DX,MES1       ; Загружаем адрес строки
+1    76	001F  CD 21			 INT	 21H		 ; Вызов прерывания DOS
+     77	0021  E8 005A			CALL	 ARRAY_MSG_PROC	     ; ВЫВЕСТИ ИЗНАЧАЛЬНЫЙ МАССИВ НА	    +
+     78				     ЭКРАН
+     79	0024  E8 0121			CALL	 KARETKA_JMP_PROC    ; ПЕРЕВЕСТИ КАРЕТКУ
+     80
+     81					; ПОДСЧЕТ СУММЫ ЭЛЕМЕНТОВ И ВЫВОД НА ЭКРАН
+     82	0027  E8 006B			CALL	 ARRAY_SUM_PROC
+     83					WRT	 MES3
+1    84	002A  B4 09			 MOV	 AH,9		 ; Функция вывода строки
+1    85	002C  BA 0022r			 LEA	 DX,MES3       ; Загружаем адрес строки
+1    86	002F  CD 21			 INT	 21H		 ; Вызов прерывания DOS
+     87	0031  E8 00EB			CALL	 OUTPUT_PROC	     ; 'OUTPUT_PROC' РАБОТАЕТ С 'AX'*
+     88					;*
+     89	0034  E8 0111			CALL	 KARETKA_JMP_PROC    ; ПЕРЕВЕСТИ КАРЕТКУ
+     90
+     91					; НАХОЖДЕНИЕ МАКСИМАЛЬНОГО ЭЛЕМЕНТА И ВЫВОД НА	    +
+     92				     ЭКРАН
+     93	0037  E8 0074			CALL	 ARRAY_MAX_PROC
+     94					WRT	 MES4
+1    95	003A  B4 09			 MOV	 AH,9		 ; Функция вывода строки
+1    96	003C  BA 0033r			 LEA	 DX,MES4       ; Загружаем адрес строки
+1    97	003F  CD 21			 INT	 21H		 ; Вызов прерывания DOS
+     98	0041  E8 00DB			CALL	 OUTPUT_PROC	     ; 'OUTPUT_PROC' РАБОТАЕТ С 'AX'*
+     99					;*
+    100	0044  E8 0101			CALL	 KARETKA_JMP_PROC    ; ПЕРЕВЕСТИ КАРЕТКУ
+    101
+    102					; СОРТИРОВКА МАСИВА И ВЫВОД НА ЭКРАН
+    103	0047  E8 0091			CALL	 ARRAY_SORT_PROC     ; БЕЗ 'ПУЗЫРЬКА' НЕ РАЗОБРАТЬСЯ
+    104					WRT	 MES2
+1   105	004A  B4 09			 MOV	 AH,9		 ; Функция вывода строки
+1   106	004C  BA 0011r			 LEA	 DX,MES2       ; Загружаем адрес строки
+1   107	004F  CD 21			 INT	 21H		 ; Вызов прерывания DOS
+    108	0051  E8 002A			CALL	 ARRAY_MSG_PROC	     ; ВЫВЕСТИ ОТСОРТИРОВАНЫЙ МАССИВ	НА+
+    109				     ЭКРАН
+    110					;*
+    111	0054  E8 00F1			CALL	 KARETKA_JMP_PROC    ; ПЕРЕВЕСТИ КАРЕТКУ
+    112
+    113					; ПОЛУЧИТЬ ПОИСКОВЫЙ
+    114					 WRT	 MES6		     ; ПОПРОСИТЬ ВВЕСТИ ПОИСКОВЫЙ
+Turbo Assembler	 Version 4.1	    03/02/20 13:57:20	    Page 3
+lab4.ASM
+
+
+
+1   115	0057  B4 09			 MOV	 AH,9		 ; Функция вывода строки
+1   116	0059  BA 0057r			 LEA	 DX,MES6       ; Загружаем адрес строки
+1   117	005C  CD 21			 INT	 21H		 ; Вызов прерывания DOS
+    118	005E  E8 00E7			 CALL	 KARETKA_JMP_PROC    ; ПЕРЕВЕСТИ КАРЕТКУ
+    119	0061  E8 0105			 CALL	 INPUT_POISKOVIY     ; ПОЛУЧИТЬ	ОТ ПОЛЬЗОВАТЕЛЯ		    +
+    120				     ПОИСКОВЫЙ
+    121	0064  E8 00E1			 CALL	 KARETKA_JMP_PROC    ; ПЕРЕВЕСТИ КАРЕТКУ
+    122					 ;*
+    123
+    124					 ; НАЙТИ КООРДИНАТЫ ВХОЖДЕНИЯ
+    125					 WRT	 MES7		     ; "ENTRY FOUND"
+1   126	0067  B4 09			 MOV	 AH,9		 ; Функция вывода строки
+1   127	0069  BA 0076r			 LEA	 DX,MES7       ; Загружаем адрес строки
+1   128	006C  CD 21			 INT	 21H		 ; Вызов прерывания DOS
+    129	006E  E8 0104			 CALL	 FIND_COORDINATES    ;НАЙТИ ВХОЖДЕНИЯ И ВЫВЕСТИ ИХ НА	    +
+    130				     ЭКРАН
+    131	0071  E8 00D4			 CALL	 KARETKA_JMP_PROC    ; ПЕРЕВЕСТИ КАРЕТКУ
+    132					 ;*
+    133
+    134	0074  CB			RET	 ;ВОЗВРАЩАЕМ УПРАВЛЕНИЕ ВЫЗЫВАЮЩЕЙ ПРОЦЕДУРЕ
+    135	0075			      MAIN ENDP
+    136				      ;* КОНЕЦ ОСНОВНОЙ ПРОЦЕДУРЫ
+    137				     ;--------------------------------------------------------------------------
+    138	0075			      PRINT_MSG	PROC
+    139	0075  8B D8			 MOV	 BX,AX	     ; ЧТО БЫ НЕ	ПОТЕРЯТЬ ЗНАЧЕНИЕ В		    +
+    140				     РЕГИСТРЕ
+    141	0077  B4 09			 MOV	 AH,09H	     ; ВЫВЕСТИ ТО ЧТО ПОЛОЖЕНО В 'DX'
+    142	0079  CD 21			 INT	 21H
+    143	007B  8B C3			 MOV	 AX,BX	     ; ВЕРНУТЬ ЗНАЧЕНИЕ В 'AX'
+    144
+    145	007D  C3			 RET
+    146	007E			      PRINT_MSG	ENDP
+    147				     ;--------------------------------------------------------------------------
+    148	007E			      ARRAY_MSG_PROC PROC
+    149	007E  B9 0010			 MOV	 CX,N	     ; КОЛ-ВО ЭЛЕМЕНТОВ МАССИВА В	СЧЕТЧИК
+    150	0081  BE 0000			 MOV	 SI,0	     ; НАЧИНАЕТЬСЯ С НУЛЕВОГО
+    151	0084				FORLOOP:
+    152	0084  8B 94 0098r		 MOV	 DX,MAS[SI]  ; ЗАКЛАДЫВАЕТЬСЯ ЭЛЕМЕНТ МАСИВА
+    153	0088  80 C2 30			 ADD	 DL,'0'	     ; ПРЕОБРАЗОВЫВАЕТСЯ В ASCII
+    154	008B  B4 02			 MOV	 AH,02H	     ; ВЫВОДИТЬСЯ НА ЭКРАН
+    155	008D  CD 21			 INT	 21H
+    156	008F  83 C6 02			 ADD	 SI,2	     ; ПЕРЕХОД К СЛЕДУЮЩЕМУ ЭЛЕМЕНТУ
+    157	0092  E2 F0			LOOP	 FORLOOP
+    158
+    159	0094  C3			 RET
+    160	0095			      ARRAY_MSG_PROC ENDP
+    161				     ;--------------------------------------------------------------------------
+    162	0095			      ARRAY_SUM_PROC PROC
+    163	0095  33 D2			 XOR	 DX,DX
+    164	0097  33 C0			 XOR	 AX,AX	     ; ОБНУЛЯЕМ	'AX'
+    165	0099  B9 0010			 MOV	 CX,N	     ; КОЛ-ВО ЭЛЕМЕНТОВ МАССИВА В	СЧЕТЧИК
+    166	009C  BE 0000			 MOV	 SI,0	     ; НАЧИНАЕТЬСЯ С НУЛЕВОГО
+    167	009F				FORLOOP1:
+    168	009F  8B 94 0098r		 MOV	 DX,MAS[SI]  ; ЗАКЛАДЫВАЕТЬСЯ ЭЛЕМЕНТ МАСИВА
+    169	00A3  03 C2			 ADD	 AX,DX	     ; СУММИРУЮТЬСЯ	ЭЛЕМЕНТЫ
+    170	00A5  83 C6 02			 ADD	 SI,2	     ; ПЕРЕХОД К СЛЕДУЮЩЕМУ ЭЛЕМЕНТУ
+    171	00A8  E2 F5			LOOP	 FORLOOP1
+Turbo Assembler	 Version 4.1	    03/02/20 13:57:20	    Page 4
+lab4.ASM
+
+
+
+    172
+    173	00AA  A3 00E0r			 MOV	 OUTPT,AX	 ; OUTPT = RESULT
+    174	00AD  C3			 RET
+    175	00AE			      ARRAY_SUM_PROC ENDP
+    176				     ;--------------------------------------------------------------------------
+    177	00AE			      ARRAY_MAX_PROC PROC
+    178	00AE  A1 0098r			 MOV	 AX,MAS[0]   ;ПЕРВЫЙ ЭЛЕМЕНТ ПОМЕЩАЕТСЯ В 'AX'
+    179	00B1  A3 00DEr			 MOV	 TMP,AX	     ;СЧИТАЕМ ЕГО МАКСИМАЛЬНЫМ И	ЗАПОМИНАЕМ
+    180	00B4  B9 0010			 MOV	 CX,N	     ; КОЛ-ВО ЭЛЕМЕНТОВ МАССИВА В	СЧЕТЧИК
+    181	00B7  49			 DEC	 CX	     ; ТАК КАК ПЕРВЫЙ УЖЕ ЭЛЕМЕНТ	УЖЕ ПРОЙДЕН
+    182	00B8  BE 0002			 MOV	 SI,2	     ;ОДИН ЭЛЕМЕНТ ЯЧЕЙКИ ЗАНИМАЕТ ДВА БИТА
+    183	00BB				FORLOOP2:
+    184	00BB  8B 84 0098r		 MOV	 AX,MAS[SI]  ;СЛЕДУЮЩИЙ ЕЛЕМЕНТ	ЗАКЛАДЫВАЕТСЯ В 'AX'
+    185	00BF  39 06 00DEr		 CMP	 TMP,AX	     ;СРАВНИВАЕТСЯ С ПРЕДПОЛАГАЕМЫМ		    +
+    186				     МАКСИВАЛЬНЫМ
+    187	00C3  7C 03			 JL	 JNGMAX	     ;ЕСЛИ НОВЫЙ ЭЛЕМЕНТ БОЛЬШЕ*
+    188	00C5  EB 08 90			 JMP	 NOTMAX	     ;ИНЧЕ-
+    189	00C8				JNGMAX:
+    190	00C8  8B 84 0098r		 MOV	 AX,MAS[SI]  ; "НА ВСЯКИЙ"
+    191	00CC  A3 00DEr			 MOV	 TMP,AX	     ;*СЧИТАЕМ ЕГО МАКСИМАЛЬНЫМ
+    192	00CF				NOTMAX:
+    193	00CF  83 C6 02			 ADD	 SI,2	     ;-ПЕРЕХОДИМ К СЛЕДУЮЩЕМУ ЭЛЕМЕНТУ
+    194	00D2  E2 E7			LOOP	 FORLOOP2
+    195
+    196	00D4  A1 00DEr			 MOV	 AX,TMP
+    197	00D7  A3 00E0r			 MOV	 OUTPT,AX
+    198					 ;MOV	 AX,TMP	     ; 'AX' = РЕЗУЛЬТАТ
+    199
+    200	00DA  C3			 RET
+    201	00DB			      ARRAY_MAX_PROC ENDP
+    202				     ;--------------------------------------------------------------------------
+    203	00DB			      ARRAY_SORT_PROC PROC
+    204	00DB  33 C9			 XOR	 CX,CX
+    205	00DD  B9 0010			 MOV	 CX,N
+    206	00E0  BB 0000			 MOV	 BX,0
+    207				     ;$-11:
+    208	00E3  8B 87 0098r		 MOV	 AX,MAS[BX]
+    209	00E7  89 87 00BAr		 MOV	 MASCP[BX],AX
+    210	00EB  83 C3 02			 ADD	 BX,2
+    211	00EE  E2 F3			 LOOP	 $-11
+    212
+    213	00F0  33 C9			 XOR	CX,CX	 ;ОЧИСТКА СЧЕТЧИКА
+    214	00F2				START_SORT:
+    215	00F2  B9 0010			 MOV	CX,N	 ; КОЛ-ВО ЭЛЕМЕНТОВ МАССИВА В СЧЕТЧИК
+    216	00F5  49			 DEC	CX	 ; ЧТО БЫ ИСПОЛЬЗОВАТЬ	КАК АДРЕС (ОТ	0 ДО 8)
+    217	00F6  D1 E1			 SHL	CX,1	 ; ТАК КАК ХРАНИТЬСЯ СЛОВО.	(СДВИГ БИТА	    +
+    218				     ВЛЕВО/УМНОЖЕНИЕ НА	2)
+    219	00F8				CYCL_START:
+    220	00F8  8B D9			 MOV	BX,CX	     ;ДЛЯ ИСПОЛЬЗОВАНИЯ	В ИНДЕКСАЦИИ
+    221	00FA  8B 87 0098r		 MOV	AX,MAS[BX]   ; ЗАПИСАТЬ	В 'AL'	ТЕКУЩИЙ ЭЛЕМЕНТ МАССИВА
+    222	00FE  3B 87 0096r		 CMP	AX,MAS[BX-2] ; СРАВНЕНИЕ ТЕКУЩЕГО ЭЛЕМЕНТА массива  +
+    223				     с	предыдущим
+    224	0102  7C 06			 JL    EXCHANGE	     ; ЕСЛИ	"СТАРШИЙ" ЭЛМЕНТ БОЛЬШЕ		    +
+    225				     ПЕРЕХОДИМ	В 'EXCHANGE'
+    226	0104  49			 DEC	CX
+    227	0105  E2 F1			 LOOP  CYCL_START    ; ИНЧЕ	ПРОДОЛЖИТЬ ПРОХОД ПО МАССИВУ
+    228	0107  EB 13 90			 JMP   CYCL_CLOSE    ; ЕСЛИ	ЦИКЛ ЗАКОНЧЕН НА ВЫХОД ИЗ		    +
+Turbo Assembler	 Version 4.1	    03/02/20 13:57:20	    Page 5
+lab4.ASM
+
+
+
+    229				     ПРОЦЕДУРЫ
+    230	010A				EXCHANGE:	     ;ПОМЕНЯТЬ ЭЛЕМЕНТЫ	МЕСТАМИ ЕСЛИ		    +
+    231				     УСЛОВИЕ ВЫПОЛНЕНО
+    232	010A  8B 97 0098r		 MOV	DX,MAS[BX]	 ; ЗАПОМНИТЬ ТЕКУЩИЙ ЭЛЕМЕНТ
+    233	010E  8B 87 0096r		 MOV	AX,MAS[BX-2]	 ;ЗАПОМНИТЬ "МЛАДШИЙ ЭЛЕМЕНТ"
+    234	0112  89 87 0098r		 MOV	MAS[BX],AX	 ;ПОММЕНЯТЬ ЕГО МЕСТАМИ С "СТАРШИМ"
+    235	0116  89 97 0096r		 MOV	MAS[BX-2],DX	 ;-//-
+    236	011A  EB D6			 JMP	START_SORT
+    237	011C				CYCL_CLOSE:
+    238
+    239	011C  33 D2			 XOR	DX,DX	     ; НА ВСЯКИЙ ИЗБАВИТСЯ ОТ МУСОРА В 'DX'
+    240
+    241	011E  C3			 RET
+    242	011F			      ARRAY_SORT_PROC ENDP
+    243				     ;--------------------------------------------------------------------------
+    244				      ;* НАЧАЛО ПРОЦЕДУРЫ "ВЫВОДА ДАННЫХ"
+    245	011F			       OUTPUT_PROC PROC
+    246
+    247	011F  A1 00E0r			 MOV	  AX,OUTPT
+    248	0122  8B D8			 MOV	  BX,AX	     ; РАЗМЕЩЕНИЕ ЧИСЛА В РЕГИСТРЕ AX
+    249	0124  0B DB			 OR	  BX,BX	     ; *ЕСЛИ ЧИЛО ПОЛОЖИТЕЛЬНОЕ
+    250	0126  79 06			 JNS	 M1	     ;	ПЕРЕЙТИ В M1.
+    251	0128  B0 2D			 MOV	  AL,"-"     ;	ИНЧЕ РАЗМЕСТИТ В РЕЗУЛЬТАТЕ СИМВОЛ    +
+    252				     МИНУСА.
+    253	012A  CD 29			 INT	  29H	     ;	ВЫВЕСТИ МИНУС НА ЭКРАН*
+    254	012C  F7 DB			 NEG	  BX	     ; ИЗМЕНИТЬ	СТАРШИЙ БИТ ЧИСЛА("УБРАТЬ	    +
+    255				     МИНУС")
+    256	012E				M1:		     ; ТОЧКА ПРЕХОДА ЕСЛИ ЧИСЛО ПОЗИТИВНОЕ
+    257	012E  8B C3			 MOV	  AX,BX	     ; ОБНОВИТЬ	ЧИСЛО В РЕГИСТРЕ 'AX'(ИЗ-ЗА "NEG  +
+    258				     BX")
+    259	0130  33 C9			 XOR	  CX,CX	     ; ОБНУЛИТЬ	РЕГИСТР СЧЕТЧИКА
+    260	0132  BB 000A			 MOV	  BX,10	     ; ДЛЯ РАЗДЕЛЕНИЯ ЧИСЛА НА РАЗРЯДЫ
+    261	0135				M2:		     ; НАЧАЛО ЦИКЛА "РАЗМЕЩЕНИЕ ЧИСЛА	В	    +
+    262				     СТЕКЕ"
+    263	0135  33 D2			 XOR	  DX,DX	     ; ОБНУЛЕНИЕ 'DX'
+    264	0137  F7 F3			 DIV	  BX	     ; ДЕЛЕНИЕ 'AX' НА	'BX'(ОТДЕЛЕНИЕ	РАЗРЯДА)
+    265	0139  80 C2 30			 ADD	  DL,"0"     ; DECIMAL TO ASCII
+    266	013C  52			 PUSH	  DX	     ; РАЗМЕЩЕНИЕ РЕЗУЛЬТАТА В СТЕКЕ
+    267	013D  41			 INC	  CX	     ; УВЕЛИЧЕНИЕ СЧЕТЧИКА
+    268	013E  85 C0			 TEST	  AX,AX	     ; *ЕСЛИ ЕЩЕ	ОСТАЛИСЬ ЦИФРЫ В ЧИСЛЕ
+    269	0140  75 F3			 JNZ	  M2	     ;	ПОВТОРИТЬ "РАЗМЕЩЕНИЕ В СТЕКЕ"
+    270	0142				M3:		     ; НАЧАЛО ЦИКЛА ВЫВОДА ЧИСЛА ИЗ СТЕК НА   +
+    271				     ЭКРАН
+    272	0142  58			 POP	  AX	     ; ДОСТАТЬ ВЕРХНЮЮ ЦИФРУ	ИЗ СТЭКА
+    273	0143  CD 29			 INT	  29H	     ; ВЫВЕСТИ ЕЁ НА	ЭКРАН
+    274	0145  E2 FB			LOOP	 M3	     ; ПОВТОРИТЬ 'M3' ПОКА	СЧЕТЧИК НЕ '0'
+    275
+    276	0147  C3			 RET	 ;ВОЗВРАЩАЕМ УПРАВЛЕНИЕ ВЫЗЫВАЮЩЕЙ ПРОЦЕДУРЕ
+    277	0148				OUTPUT_PROC ENDP
+    278				       ;* КОНЕЦ ПРОЦЕДУРЫ	"ВЫВОДА ДАННЫХ"
+    279				     ;--------------------------------------------------------------------------
+    280	0148			      KARETKA_JMP_PROC PROC
+    281	0148  8B D8			 MOV	 BX,AX		     ; ЧТО БЫ НЕ	ПОТЕРЯТЬ ЗНАЧЕНИЕ
+    282	014A  B0 0A			 MOV	 AL,0AH		     ; ПЕРЕЙТИ НА СЛЕДУЩУЮ СТРОКУ
+    283	014C  CD 29			 INT	 29H
+    284	014E  8B C3			 MOV	 AX,BX		     ; *ВЕРНУТЬ ЗНАЧЕНИЕ	В 'AX'..
+    285
+Turbo Assembler	 Version 4.1	    03/02/20 13:57:20	    Page 6
+lab4.ASM
+
+
+
+    286	0150  C3			 RET
+    287	0151			      KARETKA_JMP_PROC ENDP
+    288				     ;--------------------------------------------------------------------------
+    289	0151				INPUT_PROC PROC
+    290	0151  BE 0000			 MOV	 SI,0
+    291	0154  B9 0010			 MOV	 CX,N
+    292
+    293	0157				 START:
+    294	0157  B4 01			 MOV	 AH,1H	     ;ВВЕСТИ СИМВОЛ	ИЗ КОНСОЛИ
+    295	0159  CD 21			 INT	 21H
+    296	015B  2C 30			 SUB	 AL,30H	     ;ПРЕОБРАЗОВАТЬ ЕГО
+    297	015D  32 E4			 XOR	 AH,AH	     ;УБРАТЬ ИНСТРУКЦИЮ	ИЗ ПОЛУРЕГИСТРА
+    298	015F  89 84 0098r		 MOV	 MAS[SI],AX  ;ЗАПИСАТЬ ВВЕДЕННОЕ В МАССИВ
+    299	0163  83 C6 02			 ADD	 SI,2	     ;ШАГ 2 ИЗ-ЗА DW
+    300	0166  E2 EF			 LOOP	 START
+    301
+    302	0168  C3			 RET
+    303	0169				INPUT_PROC ENDP
+    304				     ;--------------------------------------------------------------------------
+    305	0169			     INPUT_POISKOVIY PROC
+    306	0169  B4 01			 MOV	 AH,01H		     ; СЧИТАТЬ СИМВОЛ В РЕГИСТР 'AL'
+    307	016B  CD 21			 INT	 21H
+    308	016D  2C 30			 SUB	 AL,30H
+    309	016F  32 E4			 XOR	 AH,AH		     ; ПОЧИСТИТЬ 'AX' ОТ '01H'
+    310	0171  A3 00DCr			 MOV	 SRCH,AX	     ; ЗАПОМНИТЬ ПОИСКОВЫЙ
+    311
+    312	0174  C3			 RET
+    313	0175			     INPUT_POISKOVIY ENDP
+    314				     ;--------------------------------------------------------------------------
+    315	0175			     FIND_COORDINATES PROC
+    316	0175  C7 06 00E2r 0000		 MOV	 I,0		 ; НАЧАТЬ	С ПЕРВОГО ЭЛЕМЕНТА
+    317	017B  C7 06 00E4r 0000		 MOV	 J,0
+    318	0181  B9 0010			 MOV	 CX,16		 ; 16 ЭЛЕМЕНТОВ В МАССИВЕ
+    319
+    320	0184				FORLOOP13:
+    321					 ; ПРЕОБРАЗОВАТЬ 'I'
+    322	0184  8B 1E 00E2r		 MOV	 BX,I
+    323	0188  B8 0008			 MOV	 AX,8		 ; (4*2) 4 ДЛИНА РЯДКА, 2 ИЗ-ЗА DW
+    324	018B  F7 E3			 MUL	 BX
+    325	018D  8B D8			 MOV	 BX,AX
+    326					 ; ПРЕОБРАЗОВАТЬ 'J'
+    327	018F  8B 36 00E4r		 MOV	 SI,J
+    328	0193  D1 E6			 SHL	 SI,1
+    329
+    330	0195  8B 80 00BAr		 MOV	 AX,MASCP[BX+SI]     ; ВЗЯТЬ ЭЛЕМЕНТ МАССИВА	ПО АДРЕСУ
+    331	0199  8B 1E 00DCr		 MOV	 BX,SRCH
+    332	019D  83 3E 00E4r 04		 CMP	 J,4
+    333	01A2  75 0B			 JNE	CONTINUE_LINE
+    334	01A4  C7 06 00E4r 0000		 MOV	 J,0
+    335	01AA  83 06 00E2r 01		 ADD	 I,1
+    336	01AF				CONTINUE_LINE:
+    337	01AF  3B C3			 CMP	 AX,BX		     ; СРАВНИТЬ	С ПОИСКОВЫМ
+    338	01B1  75 34			 JNE	NOT_PRINT_COORD	     ; ЕСЛИ	НЕ СОВПАЛИ ПЕРЕПРЫГУНТЬ	    +
+    339				     ВЫВОД	КООРДИНАТЫ НА ЭКРАН
+    340
+    341	01B3  89 0E 00DEr		 MOV	 TMP,CX		     ; 'OUTPUT_PROC' ЗАТИРАЕТ 'CX'
+    342					 ;ВЫВОД КООРДИНАТЫ НА ЭКРАН
+Turbo Assembler	 Version 4.1	    03/02/20 13:57:20	    Page 7
+lab4.ASM
+
+
+
+    343	01B7  E8 FF8E			 CALL	 KARETKA_JMP_PROC    ; ПЕРЕВЕСТИ КАРЕТКУ
+    344					 WRT	 MES8		     ; "( "
+1   345	01BA  B4 09			 MOV	 AH,9		 ; Функция вывода строки
+1   346	01BC  BA 008Br			 LEA	 DX,MES8       ; Загружаем адрес строки
+1   347	01BF  CD 21			 INT	 21H		 ; Вызов прерывания DOS
+    348	01C1  A1 00E2r			 MOV	 AX,I		     ; 'OUTPUT_PROC' РАБОТАЕТ С 'AX'
+    349	01C4  40			 INC	 AX		     ; НЕ ПРОГРАММИСТСТСТСКАЯ		    +
+    350				     КООРДИНАТА
+    351	01C5  A3 00E0r			 MOV	 OUTPT,AX	     ; OUTPUT_PROC РАБОТАЕТ С OUTPT
+    352	01C8  E8 FF54			 CALL	 OUTPUT_PROC	     ; ВЫВОДИТ ЦИФРУ
+    353					 WRT	 MES9		     ; " ; "
+1   354	01CB  B4 09			 MOV	 AH,9		 ; Функция вывода строки
+1   355	01CD  BA 008Er			 LEA	 DX,MES9       ; Загружаем адрес строки
+1   356	01D0  CD 21			 INT	 21H		 ; Вызов прерывания DOS
+    357	01D2  A1 00E4r			 MOV	 AX,J		     ; 'OUTPUT_PROC' РАБОТАЕТ С 'AX'
+    358	01D5  40			 INC	 AX		     ; НЕ ПРОГРАММИСТСТСТСКАЯ		    +
+    359				     КООРДИНАТА
+    360	01D6  A3 00E0r			 MOV	 OUTPT,AX	     ; OUTPUT_PROC РАБОТАЕТ С OUTPT
+    361	01D9  E8 FF43			 CALL	 OUTPUT_PROC	     ; ВЫВОДИТ ЦИФРУ
+    362					 WRT	 MES10		     ; " )"
+1   363	01DC  B4 09			 MOV	 AH,9		 ; Функция вывода строки
+1   364	01DE  BA 0092r			 LEA	 DX,MES10	; Загружаем адрес	строки
+1   365	01E1  CD 21			 INT	 21H		 ; Вызов прерывания DOS
+    366					 ;*
+    367	01E3  8B 0E 00DEr		 MOV	 CX,TMP		     ; ВОЗВРАЩАЕТСЯ	СЧЕТЧИК
+    368
+    369	01E7				NOT_PRINT_COORD:
+    370	01E7  83 06 00E4r 01		 ADD	 J,1
+    371	01EC  E2 96			 LOOP	     FORLOOP13
+    372
+    373	01EE  C3			 RET
+    374	01EF			      FIND_COORDINATES ENDP
+    375				     ;--------------------------------------------------------------------------
+    376
+    377
+    378	01EF			     CSEG ENDS	 ; КОНЕЦ СЕГМЕНТА КОДА
+    379				     END MAIN	 ; ВЫХОД ИЗ ПРОГРАММЫ
+Turbo Assembler	 Version 4.1	    03/02/20 13:57:20	    Page 8
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "03/02/20"
+??FILENAME			  Text	 "lab4	  "
+??TIME				  Text	 "13:57:20"
+??VERSION			  Number 040A
+@CPU				  Text	 0101H
+@CURSEG				  Text	 CSEG
+@FILENAME			  Text	 LAB4
+@WORDSIZE			  Text	 2
+ARRAY_MAX_PROC			  Near	 CSEG:00AE
+ARRAY_MSG_PROC			  Near	 CSEG:007E
+ARRAY_SORT_PROC			  Near	 CSEG:00DB
+ARRAY_SUM_PROC			  Near	 CSEG:0095
+CONTINUE_LINE			  Near	 CSEG:01AF
+CYCL_CLOSE			  Near	 CSEG:011C
+CYCL_START			  Near	 CSEG:00F8
+EXCHANGE			  Near	 CSEG:010A
+FIND_COORDINATES		  Near	 CSEG:0175
+FORLOOP				  Near	 CSEG:0084
+FORLOOP1			  Near	 CSEG:009F
+FORLOOP13			  Near	 CSEG:0184
+FORLOOP2			  Near	 CSEG:00BB
+I				  Word	 DSEG:00E2
+INPUT_POISKOVIY			  Near	 CSEG:0169
+INPUT_PROC			  Near	 CSEG:0151
+J				  Word	 DSEG:00E4
+JNGMAX				  Near	 CSEG:00C8
+KARETKA_JMP_PROC		  Near	 CSEG:0148
+M1				  Near	 CSEG:012E
+M2				  Near	 CSEG:0135
+M3				  Near	 CSEG:0142
+MAIN				  Far	 CSEG:0000
+MAS				  Word	 DSEG:0098
+MASCP				  Word	 DSEG:00BA
+MES1				  Byte	 DSEG:0000
+MES10				  Byte	 DSEG:0092
+MES11				  Byte	 DSEG:0096
+MES2				  Byte	 DSEG:0011
+MES3				  Byte	 DSEG:0022
+MES4				  Byte	 DSEG:0033
+MES5				  Byte	 DSEG:0044
+MES6				  Byte	 DSEG:0057
+MES7				  Byte	 DSEG:0076
+MES8				  Byte	 DSEG:008B
+MES9				  Byte	 DSEG:008E
+N				  Number 0010
+NOTMAX				  Near	 CSEG:00CF
+NOT_PRINT_COORD			  Near	 CSEG:01E7
+OUTPT				  Word	 DSEG:00E0
+OUTPUT_PROC			  Near	 CSEG:011F
+PRINT_MSG			  Near	 CSEG:0075
+SRCH				  Word	 DSEG:00DC
+START				  Near	 CSEG:0157
+START_SORT			  Near	 CSEG:00F2
+TMP				  Word	 DSEG:00DE
+Turbo Assembler	 Version 4.1	    03/02/20 13:57:20	    Page 9
+Symbol Table
+
+
+
+
+Macro Name
+
+WRT
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CSEG				  16  01EF Para	  Public  CODE
+DSEG				  16  00E6 Para	  Public  DATA
+STACKSEG			  16  0040 Para	  Stack	  STACK
+

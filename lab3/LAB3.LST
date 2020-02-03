@@ -1,0 +1,446 @@
+Turbo Assembler	 Version 4.1	    03/02/20 13:56:19	    Page 1
+lab3.ASM
+
+
+
+      1				     ; (40x 2 -23) / x	якщо 0 < x ≤ 7
+      2				     ; 38x 3 +5		якщо x ≤ 0
+      3				     ; 126 /x		якщо x > 7
+      4
+      5				     ;*	СОЗДАНИЕ СЕГМЕНТА СТЭКА *
+      6	0000			     STACKSEG SEGMENT PARA STACK "STACK"
+      7	0000  20*(0000)				  DW	  32   DUP(0)
+      8	0040			     STACKSEG ENDS
+      9				     ;*	СОЗДАНИЕ СЕГМЕНТА ДАННЫХ *
+     10	0000			     DSEG SEGMENT PARA PUBLIC "DATA"
+     11											       ; ПРОМЕЖУТОЧНЫЕ	    +
+     12				     ПЕРЕМЕННЫЕ ДЛЯ УРАВНЕНИЙ
+     13	0000  ????			     X	       DW ?
+     14	0002  ????			     REZ       DW ?
+     15	0004  ????			     REZ2  DW ?
+     16
+     17	0006  007E			     TEMP  DW 126
+     18	0008  00			     FL	   DB 0				       ; ФЛАГ НЕГАТИВНОГО	    +
+     19				     (1)/ПОЗИТИВНОГО(0) ЧИСЛА
+     20	0009  05 ?? 04*(3F)		     DUMP  DB 5, ?, 4 DUP('?') ; СТРУКТКРА ДАННЫХ ДЛЯ	ХРАНЕНИЯ    +
+     21				     ВВОДА
+     22	000F  00			     ERRCD DB 0				       ; ФЛАГ ОШИБКИ
+     23											       ; 0 - ОШИБОК НЕТ
+     24											       ; 1 - ОШИБКА
+     25	0010  2C			     COMATXT DB	','
+     26	0011  2A 45 52 52 4F 52	2A	     ERRTXT  DB	'*ERROR*'
+     27	0018  20 2D 20 53 4F 4D	45+			     DB	' - SOMETHING WENT WRONG$'
+     28	      54 48 49 4E 47 20	57+
+     29	      45 4E 54 20 57 52	4F+
+     30	      4E 47 24
+     31	0030  45 4E 54 45 52 20	59+	     MSGTXT  DB	'ENTER YOUR NUMBER:$'
+     32	      4F 55 52 20 4E 55	4D+
+     33	      42 45 52 3A 24
+     34	0043  41 4E 53 57 45 52	3A+	     MSG2TXT DB	'ANSWER:  $'
+     35	      20 20 24
+     36	004D  43 45 4C 4F 45 3A	24	     CELOETXT DB 'CELOE:$'
+     37	0054  4F 53 54 41 54 4F	4B+	     OSTATOKTXT	DB 'OSTATOK:$'
+     38	      3A 24
+     39	005D			     DSEG ENDS
+     40				     ;--------------------------------------------------------------------------
+     41				     ;*	СОЗДАНИЕ СЕГМЕНТА КОДА *
+     42	0000			     CSEG     SEGMENT PARA PUBLIC "CODE"
+     43				     ;*	НАЧАЛО ОСНОВНОЙ ПРОЦЕДУРЫ
+     44	0000			      MAIN    PROC    FAR
+     45					      ASSUME  CS: CSEG,	DS: DSEG, SS: STACKSEG
+     46					;* MAGIC * (РАЗМЕЩЕНИЕ ПРОГРАММЫ В ПАМЯТИ?)
+     47	0000  1E			     PUSH     DS
+     48	0001  B8 0000			     MOV      AX, 0
+     49	0004  50			     PUSH     AX
+     50	0005  B8 0000s			     MOV      AX, DSEG	     ; *ИНИЦИАЛИЗАЦИЯ СЕГМЕНТНОГО
+     51	0008  8E D8			     MOV      DS, AX	     ;	РЕГИСРА 'DS'*
+     52					;* MAGIC END'S *
+     53
+     54	000A  E8 007D			     CALL     ENTER_MSG_PROC
+     55	000D  E8 00EB			     CALL     INPUT_PROC	     ;ВЫЗОВ ПРОЦЕДУРЫ "ВВОДА	ДАННЫХ"
+     56	0010  80 3E 000Fr 01		     CMP      ERRCD,1		     ; *ЕСЛИ ЕСТЬ ОШИБКА
+     57	0015  74 6F			     JE		     ERR_EXIT		     ;	ПЕРЕЙТИ К ВЫВОДУ		    +
+Turbo Assembler	 Version 4.1	    03/02/20 13:56:19	    Page 2
+lab3.ASM
+
+
+
+     58				     СООБЩЕНИЯ*
+     59
+     60	0017  8B D8			     MOV      BX,AX		      ;	ЧТО БЫ НЕ ПОТЕРЯТЬ ВВЕДЕННОЕ+
+     61				     ЧИСЛО
+     62	0019  E8 007A			     CALL     ENTER_MSG2_PROC
+     63	001C  8B C3			     MOV      AX,BX		      ;	ЧТО БЫ НЕ ПОТЕРЯТЬ ВВЕДЕННОЕ+
+     64				     ЧИСЛО
+     65
+     66	001E  80 3E 0008r 01		     CMP FL,1
+     67
+     68	0023  74 2F			     JE		      EQUATION2		      ;	ЕСЛИ 'AX' <	0
+     69
+     70	0025  3D 0000			     CMP AX,0
+     71	0028  74 2A			     JE		      EQUATION2		      ;	ЕСЛИ 'AX' =	0
+     72	002A  3D 0007			     CMP AX,7
+     73	002D  77 2E			     JA		      EQUATION3		      ;	ЕСЛИ 'AX' >	7
+     74	002F  EB 01 90			     JMP      EQUATION1
+     75
+     76	0032				EQUATION1:			      ;	УРАВНЕНИЕ 1
+     77	0032  E8 007D			     CALL     EQUATION1_PROC  ;	ЕСЛИ ПЕРВОЕ УСЛОВИЕ ИСТИНА
+     78	0035  E8 014B			     CALL     ENTER_CELOE_PROC
+     79	0038  A1 0002r			     MOV      AX,REZ
+     80	003B  E8 011F			     CALL     OUTPUT_PROC     ;ВЫЗОВ ПРОЦЕДУРЫ "ВЫВОДА ДАННЫХ"
+     81	003E  E8 014E			     CALL     ENTER_OSTATOK_PROC
+     82	0041  A1 0004r			     MOV      AX,REZ2		      ;ВЫВЕСТИ ОСТАТОК
+     83	0044  E8 0116			     CALL     OUTPUT_PROC
+     84	0047  B0 2F			     MOV      AL,'/'
+     85	0049  CD 29			     INT      29H
+     86	004B  A1 0000r			     MOV      AX,X
+     87	004E  E8 010C			     CALL     OUTPUT_PROC
+     88	0051  EB 2C 90			     JMP     FINISH		      ;	ЧТО БЫ НЕ СЧИТАТЬ	ДРУГИЕ	    +
+     89				     УРАВНЕНИЯ
+     90
+     91	0054				EQUATION2:
+     92	0054  E8 007A			     CALL     EQUATION2_PROC  ;	ЕСЛИ ВТОРОЕ УСЛОВИЕ ИСТИНА
+     93	0057  E8 0103			     CALL     OUTPUT_PROC
+     94	005A  EB 23 90			     JMP     FINISH		      ;	ЧТО БЫ НЕ СЧИТАТЬ	ДРУГИЕ	    +
+     95				     УРАВНЕНИЯ
+     96
+     97	005D				EQUATION3:
+     98	005D  E8 0087			     CALL     EQUATION3_PROC  ;	ЕСЛИ ТРЕТЬЕ УСЛОВИЕ ИСТИНА
+     99	0060  E8 0120			     CALL     ENTER_CELOE_PROC
+    100	0063  A1 0002r			     MOV      AX,REZ
+    101	0066  E8 00F4			     CALL     OUTPUT_PROC     ;ВЫЗОВ ПРОЦЕДУРЫ "ВЫВОДА ДАННЫХ"
+    102	0069  E8 0123			     CALL     ENTER_OSTATOK_PROC
+    103	006C  A1 0004r			     MOV      AX,REZ2		      ;ВЫВЕСТИ ОСТАТОК
+    104	006F  E8 00EB			     CALL     OUTPUT_PROC
+    105	0072  B0 2F			     MOV      AL,'/'
+    106	0074  CD 29			     INT      29H
+    107	0076  A1 0000r			     MOV      AX,X
+    108	0079  E8 00E1			     CALL     OUTPUT_PROC
+    109	007C  EB 01 90			     JMP     FINISH		      ;	ЧТО БЫ НЕ СЧИТАТЬ	ДРУГИЕ	    +
+    110				     УРАВНЕНИЯ
+    111
+    112	007F				FINISH:
+    113
+    114	007F  80 3E 000Fr 00		     CMP      ERRCD,0		     ; *ЕСЛИ ОШИБОК НЕТ
+Turbo Assembler	 Version 4.1	    03/02/20 13:56:19	    Page 3
+lab3.ASM
+
+
+
+    115	0084  74 03			     JE	     EXIT_POINT	     ;	ВЫЙТИ ИЗ	ПРОГРАММЫ*
+    116
+    117	0086				ERR_EXIT:
+    118	0086  E8 0019			     CALL ERRMSG_PROC	     ; ВЫВОД СООБЩЕНИЯ ОБ ОШИБКЕ НА	    +
+    119				     ЭКРАН
+    120
+    121	0089				EXIT_POINT:		     ; ДЛЯ "ВНЕШТАТНОГО" ВЫХОДА
+    122
+    123	0089  CB			     RET	     ;ВОЗВРАЩАЕМ УПРАВЛЕНИЕ	ВЫЗЫВАЮЩЕЙ	    +
+    124				     ПРОЦЕДУРЕ
+    125	008A			      MAIN ENDP
+    126				      ;* КОНЕЦ ОСНОВНОЙ ПРОЦЕДУРЫ
+    127				     ;--------------------------------------------------------------------------
+    128				      ;* НАЧАЛО ПРОЦЕДУРЫ "ВЫВОДА СООБЩЕНИЯ"
+    129	008A			       ENTER_MSG_PROC PROC
+    130	008A  B4 09			      MOV     AH,9
+    131	008C  BA 0030r			      MOV     DX,OFFSET	MSGTXT	     ; ВЫВЕСТИ СООБЩЕНИЕ
+    132	008F  CD 21			      INT     21H
+    133	0091  B0 0A			      MOV     AL,0AH			     ; ПЕРЕЙТИ НА СЛЕДУЩУЮ	    +
+    134				     СТРОКУ
+    135	0093  CD 29			      INT     29H
+    136	0095  C3			      RET	     ;ВОЗВРАЩАЕМ УПРАВЛЕНИЕ	ВЫЗЫВАЮЩЕЙ	    +
+    137				     ПРОЦЕДУРЕ
+    138	0096			       ENTER_MSG_PROC ENDP
+    139				      ;* КОНЕЦ ПРОЦЕДУРЫ "ВЫВОДА СООБЩЕНИЯ"
+    140				     ;--------------------------------------------------------------------------
+    141				      ;* НАЧАЛО ПРОЦЕДУРЫ "ВЫВОДА СООБЩЕНИЯ2"
+    142	0096			       ENTER_MSG2_PROC PROC
+    143	0096  B0 0A			      MOV     AL,0AH			     ; ПЕРЕЙТИ НА СЛЕДУЩУЮ	    +
+    144				     СТРОКУ
+    145	0098  CD 29			      INT     29H
+    146	009A  B4 09			      MOV     AH,9
+    147	009C  BA 0043r			      MOV     DX,OFFSET	MSG2TXT	     ; ВЫВЕСТИ СООБЩЕНИЕ
+    148	009F  CD 21			      INT     21H
+    149	00A1  C3			      RET	     ;ВОЗВРАЩАЕМ УПРАВЛЕНИЕ	ВЫЗЫВАЮЩЕЙ	    +
+    150				     ПРОЦЕДУРЕ
+    151	00A2			       ENTER_MSG2_PROC ENDP
+    152				      ;* КОНЕЦ ПРОЦЕДУРЫ "ВЫВОДА СООБЩЕНИЯ2"
+    153				     ;--------------------------------------------------------------------------
+    154				      ;* НАЧАЛО ПРОЦЕДУРЫ "ВЫВОДА СООБЩЕНИЯ ОБ ОШИБКЕ"
+    155	00A2			       ERRMSG_PROC PROC
+    156	00A2  B0 0A			      MOV     AL,0AH			     ; ПЕРЕЙТИ НА СЛЕДУЩУЮ	    +
+    157				     СТРОКУ
+    158	00A4  CD 29			      INT     29H
+    159	00A6  B4 09			      MOV     AH,9
+    160	00A8  BA 0011r			      MOV     DX,OFFSET	ERRTXT	     ; ВЫВЕСТИ СООБЩЕНИЕ
+    161	00AB  CD 21			      INT     21H
+    162	00AD  B8 4C00			      MOV     AX,4C00h			     ; ЗАВЕРШИТЬ ПРОГРАММУ
+    163	00B0  CD 21			  INT	  21h
+    164	00B2			       ERRMSG_PROC ENDP
+    165				      ;* КОНЕЦ ПРОЦЕДУРЫ "ВЫВОДА СООБЩЕНИЯ	ОБ ОШИБКЕ"
+    166				     ;--------------------------------------------------------------------------
+    167				      ;* УРАВНЕНИЕ 1
+    168	00B2			       EQUATION1_PROC PROC
+    169	00B2  A3 0000r			      MOV X,AX
+    170	00B5  8B D8			      MOV BX,AX
+    171	00B7  F7 E3			      MUL BX
+Turbo Assembler	 Version 4.1	    03/02/20 13:56:19	    Page 4
+lab3.ASM
+
+
+
+    172	00B9  BB 0028			      MOV BX,40
+    173	00BC  F7 E3			      MUL BX
+    174	00BE  BB 0017			      MOV BX,23
+    175	00C1  2B C3			      SUB AX,BX
+    176	00C3  8B 1E 0000r		      MOV BX,X
+    177	00C7  F7 F3			      DIV BX
+    178	00C9  A3 0002r			      MOV REZ,AX
+    179	00CC  89 16 0004r		      MOV REZ2,DX
+    180
+    181	00D0  C3			      RET
+    182	00D1			       EQUATION1_PROC ENDP
+    183				     ;--------------------------------------------------------------------------
+    184				      ;* УРАВНЕНИЕ 2
+    185	00D1			       EQUATION2_PROC PROC
+    186	00D1  A3 0000r			      MOV X,AX
+    187	00D4  8B D8			      MOV BX,AX
+    188	00D6  F7 EB			      IMUL BX
+    189	00D8  8B 1E 0000r		      MOV BX,X
+    190	00DC  F7 EB			      IMUL BX
+    191	00DE  BB 0026			      MOV BX,38
+    192	00E1  F7 EB			      IMUL BX
+    193	00E3  05 0005			      ADD AX,5
+    194
+    195	00E6  C3			      RET
+    196	00E7			       EQUATION2_PROC ENDP
+    197				     ;--------------------------------------------------------------------------
+    198				      ;* УРАВНЕНИЕ 3
+    199	00E7			       EQUATION3_PROC PROC
+    200	00E7  A3 0000r			      MOV X,AX
+    201	00EA  8B D8			      MOV BX,AX
+    202	00EC  A1 0006r			      MOV AX,TEMP
+    203	00EF  33 D2			      XOR DX,DX
+    204	00F1  F7 F3			      DIV BX
+    205	00F3  A3 0002r			      MOV REZ,AX
+    206	00F6  89 16 0004r		      MOV REZ2,DX
+    207
+    208	00FA  C3			      RET
+    209	00FB			       EQUATION3_PROC ENDP
+    210				     ;--------------------------------------------------------------------------
+    211				      ;* НАЧАЛО ПРОЦЕДУРЫ "ВВОДА ДАННЫХ"
+    212	00FB			      INPUT_PROC PROC
+    213
+    214	00FB  C6 06 000Fr 00		     MOV ERRCD,0	     ; ОБНУЛЕНИЕ КОДА ОШИБКИ
+    215					;* ВВОД ДАННЫХ С КЛАВИТУРЫ *
+    216	0100  BA 0009r			     LEA      DX,DUMP	     ; РАЗМЕЩЕНИЕ В 'DX' СТРУКТУРЫ 'DUMP'
+    217	0103  B4 0A			     MOV      AH,10	     ; КОД '10' ПРЕРЫВНИЯ 21..
+    218	0105  CD 21			     INT      21H	     ; ..ОТВЕЧАЕТ ЗА ВВОД	ДАННЫХ С		    +
+    219				     КЛАВИАТУРЫ
+    220					;* КОНЕЦ ПРОЦЕДУРЫ "ВВОДА ДАННЫХ"
+    221					;* ОПРЕДЕЛЕНИЕ КОЛ-ВА ВВЕДЕНЫХ СИМОВЛОВ
+    222	0107  BE 000Ar			     LEA      SI,DUMP+1	     ; РАЗМЕЩЕНИЕ В 'SI' АДРЕСА С КОЛ-ВОМ   +
+    223				     ВВЕДЕНЫХ ЗНАКОВ
+    224	010A  33 C9			     XOR      CX,CX	     ; ОБНУЛЕНИЕ СЧЕТЧИКА
+    225	010C  8A 0C			     MOV      CL,[SI]	     ; "УСТАНОВКА" СЧЕТЧИКА
+    226	010E  83 F9 00			     CMP      CX,0	     ; *ЕСЛИ НИЧЕГО НЕ ВВЕДЕНО
+    227	0111  74 44			     JE		     SOME_ERR	 ; ВЫВЕСТИ КОД ОШИБКИ
+    228					;* ОПРЕДЕЛЕНИЕ ПОЗИТИВНОСТИ ЧИСЛА
+Turbo Assembler	 Version 4.1	    03/02/20 13:56:19	    Page 5
+lab3.ASM
+
+
+
+    229	0113  C6 06 0008r 00		     MOV      FL,0	     ; ДЛЯ СБРОСА ФЛАГА ПОЗ/НЕГ ЧИСЛА
+    230	0118  46			     INC      SI		     ; *ПЕРЕХОД С КОЛ-ВА ВВЕДЕНЫХ	    +
+    231				     СИМВОЛОВ
+    232										     ;	НА ПЕРВЫЙ ВВЕДЕННЫЙ	    +
+    233				     СИМВОЛ.
+    234	0119  8A 04			     MOV      AL,[SI]	     ;	РАЗМЕЩЕНИЕ ЕГО В РЕГИСТР ДЛЯ	    +
+    235				     ОБРАБОТКИ.
+    236	011B  3C 2D			     CMP      AL,'-'	     ;	ПРОВЕРКА МИНУС ЛИ ЭТО.
+    237	011D  75 0D			     JNE     NO_MINUS	     ;	ЕСЛИ МИНУСА НЕТ - ПЕРЕХОД*
+    238	011F  C6 06 0008r 01		     MOV	      FL,1	     ; УСТАНОКА	ФЛАГА НЕГАТИВНОГО   +
+    239				     ЧИСЛА
+    240	0124  FE C9			     DEC      CL		     ; УЧЕСТЬ МИНУС В КОЛ-ВЕ		    +
+    241				     ВВЕДЕННЫХ	СИМВОЛОВ
+    242	0126  83 F9 00			     CMP      CX,0	     ; *ЕСЛИ КРОМЕ МИНУСА НИЧЕГО НЕ	    +
+    243				     ВВЕДЕНО
+    244	0129  74 2C			     JE		     SOME_ERR	     ;	ВЫЙТИ ИЗ	ПРОГРАММЫ*
+    245	012B  46			     INC      SI		     ; ПЕРЕЙТИ К СЛЕДУЮЩЕМУ РАЗРЯДУ+
+    246				     ЧИСЛА
+    247	012C				NO_MINUS:		     ;*	НАЧАЛО РАБОТЫ С ЧИСЛОМ
+    248	012C  33 C0			     XOR      AX,AX	     ; ОЧИСТКА 'AX'
+    249	012E  33 FF			     XOR      DI,DI	     ; ОЧИСТКА 'DI'
+    250	0130  BF 000A			     MOV      DI,10	     ; ДЛЯ РАЗДЕЛЕНИЯ ЧИСЛА НА РАЗРЯДЫ
+    251	0133  4E			     DEC      SI		     ; ВОЗВРАЩАЕМСЯ	К РАБОЧЕМУ	    +
+    252				     СИМВОЛУ
+    253	0134				FOR_LOOP:		     ; НАЧАЛО ЦИКЛА ПРОХОДА ПО ЧИСЛУ	    +
+    254				     (ПОРАЗРЯДНО)
+    255	0134  46			     INC      SI		     ; ПЕРЕХОД К ПЕРВОМУ	СИМВОЛУ
+    256	0135  33 DB			     XOR      BX,BX	     ; ОБНУЛЕНИЕ 'BX'
+    257	0137  8A 1C			     MOV      BL,[SI]	     ; РАЗМЕЩЕНИЕ ЧИСЛА В РЕГИСТР
+    258	0139  80 EB 30			     SUB      BL,'0'	     ; ПРЕОБРАЗОВАНИЕ ASCII TO DEC
+    259	013C  80 FB 09			     CMP      BL,9	     ; *ЕСЛИ ВВЕДЕНА	НЕ ЦИФРА
+    260	013F  77 16			     JA		     SOME_ERR	     ;	ВЫЙТИ ИЗ	ПРОГРАММЫ*
+    261	0141  F7 E7			     MUL      DI		     ; *УМНОЖАЕМ 'AX' НА 10 ДЛЯ		    +
+    262				     ДОБАВЛЕНИЯ МЕСТА
+    263										     ;	ПОД НОВЫЙ СИМВОЛ*	(1 -> 10 +  +
+    264				     'BX' = 11)
+    265	0143  03 C3			     ADD      AX,BX	     ;	ПРИБАВЛЯЕМ К	ЧИСЛУ В 'AX'		    +
+    266				     ПОЛУЧЕННУЮ ЦИФРУ
+    267	0145  E2 ED			LOOP	     FOR_LOOP	 ; "КОНЕЦ"	ЦИКЛА ПРОХОДА ПО ЧИСЛУ
+    268	0147  80 3E 0008r 01		     CMP      FL,1	     ; *ЕСЛИ ЧИСЛО НЕ ОТРИЦАТЕЛЬНОЕ
+    269	014C  75 02			     JNE     NOT_NEG	     ;	НИЧЕГО НЕ ДЕЛАЕМ.
+    270	014E  F7 D8			     NEG      AX		     ;	ИНЧЕ - ДЕЛАЕМ	ЕГО НЕГАТИВНЫМ.
+    271	0150				NOT_NEG:
+    272	0150  80 3E 000Fr 00		 CMP	      ERRCD,0	 ; *ЕСЛИ ОШИБОК НЕТ
+    273	0155  74 05			 JE	      EXIT	     ;	НА ВЫХОД	ИЗ ПРОЦЕДУРЫ*
+    274
+    275	0157				SOME_ERR:
+    276	0157  C6 06 000Fr 01		 MOV	      ERRCD,1	     ; ПОДНЯТЬ ФЛАГ ОШИБКИ - 1
+    277
+    278	015C				EXIT:
+    279	015C  C3			     RET	     ;ВОЗВРАЩАЕМ УПРАВЛЕНИЕ	ВЫЗЫВАЮЩЕЙ	    +
+    280				     ПРОЦЕДУРЕ
+    281	015D			      INPUT_PROC ENDP
+    282				      ;* КОНЕЦ ПРОЦЕДУРЫ "ВВОДА ДАННЫХ"
+    283				     ;--------------------------------------------------------------------------
+    284				      ;* НАЧАЛО ПРОЦЕДУРЫ "ВЫВОДА ДАННЫХ"
+    285	015D			       OUTPUT_PROC PROC
+Turbo Assembler	 Version 4.1	    03/02/20 13:56:19	    Page 6
+lab3.ASM
+
+
+
+    286
+    287	015D  8B D8			     MOV      BX,AX	     ; РАЗМЕЩЕНИЕ ЧИСЛА В РЕГИСТРЕ AX
+    288	015F  0B DB			     OR		      BX,BX	     ; *ЕСЛИ ЧИЛО ПОЛОЖИТЕЛЬНОЕ
+    289	0161  79 06			     JNS	     M1			     ;	ПЕРЕЙТИ В M1.
+    290	0163  B0 2D			     MOV      AL,"-"	     ;	ИНЧЕ РАЗМЕСТИТ В РЕЗУЛЬТАТЕ	    +
+    291				     СИМВОЛ МИНУСА.
+    292	0165  CD 29			     INT      29H	     ;	ВЫВЕСТИ МИНУС НА ЭКРАН*
+    293	0167  F7 DB			     NEG      BX		     ; ИЗМЕНИТЬ	СТАРШИЙ БИТ ЧИСЛА    +
+    294				     ("УБРАТЬ МИНУС")
+    295	0169				M1:				     ; ТОЧКА ПРЕХОДА ЕСЛИ ЧИСЛО	    +
+    296				     ПОЗИТИВНОЕ
+    297	0169  8B C3			     MOV      AX,BX	     ; ОБНОВИТЬ	ЧИСЛО В РЕГИСТРЕ 'AX'	    +
+    298				     (ИЗ-ЗА	"NEG BX")
+    299	016B  33 C9			     XOR      CX,CX	     ; ОБНУЛИТЬ	РЕГИСТР СЧЕТЧИКА
+    300	016D  BB 000A			     MOV      BX,10	     ; ДЛЯ РАЗДЕЛЕНИЯ ЧИСЛА НА РАЗРЯДЫ
+    301	0170				M2:				     ; НАЧАЛО ЦИКЛА "РАЗМЕЩЕНИЕ	    +
+    302				     ЧИСЛА	В СТЕКЕ"
+    303	0170  33 D2			     XOR      DX,DX	     ; ОБНУЛЕНИЕ 'DX'
+    304	0172  F7 F3			     DIV      BX		     ; ДЕЛЕНИЕ 'AX' НА	'BX'(ОТДЕЛЕНИЕ	    +
+    305				     РАЗРЯДА)
+    306	0174  80 C2 30			     ADD      DL,"0"	     ; DECIMAL TO ASCII
+    307	0177  52			     PUSH     DX		     ; РАЗМЕЩЕНИЕ РЕЗУЛЬТАТА В	    +
+    308				     СТЕКЕ
+    309	0178  41			     INC      CX		     ; УВЕЛИЧЕНИЕ СЧЕТЧИКА
+    310	0179  85 C0			     TEST     AX,AX	     ; *ЕСЛИ ЕЩЕ	ОСТАЛИСЬ ЦИФРЫ В ЧИСЛЕ
+    311	017B  75 F3			     JNZ      M2		     ;	ПОВТОРИТЬ "РАЗМЕЩЕНИЕ В	    +
+    312				     СТЕКЕ"
+    313	017D				M3:				     ; НАЧАЛО ЦИКЛА ВЫВОДА ЧИСЛА ИЗ +
+    314				     СТЕК НА ЭКРАН
+    315	017D  58			     POP      AX		     ; ДОСТАТЬ ВЕРХНЮЮ ЦИФРУ	ИЗ	    +
+    316				     СТЭКА
+    317	017E  CD 29			     INT      29H	     ; ВЫВЕСТИ ЕЁ НА	ЭКРАН
+    318	0180  E2 FB			LOOP	     M3			     ; ПОВТОРИТЬ 'M3' ПОКА	СЧЕТЧИК НЕ +
+    319				     '0'
+    320
+    321	0182  C3			     RET	     ;ВОЗВРАЩАЕМ УПРАВЛЕНИЕ	ВЫЗЫВАЮЩЕЙ	    +
+    322				     ПРОЦЕДУРЕ
+    323	0183			       OUTPUT_PROC ENDP
+    324				      ;* КОНЕЦ ПРОЦЕДУРЫ "ВЫВОДА ДАННЫХ"
+    325				     ;--------------------------------------------------------------------------
+    326	0183			       ENTER_CELOE_PROC	PROC
+    327	0183  B0 0A			      MOV     AL,0AH				     ; ПЕРЕЙТИ НА СЛЕДУЩУЮ +
+    328				     СТРОКУ
+    329	0185  CD 29			      INT     29H
+    330	0187  B4 09			      MOV     AH,9
+    331	0189  BA 004Dr			      MOV     DX,OFFSET	CELOETXT	     ; ВЫВЕСТИ СООБЩЕНИЕ
+    332	018C  CD 21			      INT     21H
+    333	018E  C3			      RET	     ;ВОЗВРАЩАЕМ УПРАВЛЕНИЕ	ВЫЗЫВАЮЩЕЙ	    +
+    334				     ПРОЦЕДУРЕ
+    335	018F			       ENTER_CELOE_PROC	ENDP
+    336				     ;--------------------------------------------------------------------------
+    337	018F			       ENTER_OSTATOK_PROC PROC
+    338	018F  B0 0A			      MOV     AL,0AH				     ; ПЕРЕЙТИ НА СЛЕДУЩУЮ +
+    339				     СТРОКУ
+    340	0191  CD 29			      INT     29H
+    341	0193  B4 09			      MOV     AH,9
+    342	0195  BA 0054r			      MOV     DX,OFFSET	OSTATOKTXT   ; ВЫВЕСТИ СООБЩЕНИЕ
+Turbo Assembler	 Version 4.1	    03/02/20 13:56:19	    Page 7
+lab3.ASM
+
+
+
+    343	0198  CD 21			      INT     21H
+    344	019A  C3			      RET	     ;ВОЗВРАЩАЕМ УПРАВЛЕНИЕ	ВЫЗЫВАЮЩЕЙ	    +
+    345				     ПРОЦЕДУРЕ
+    346	019B			       ENTER_OSTATOK_PROC ENDP
+    347				     ;--------------------------------------------------------------------------
+    348
+    349	019B			     CSEG ENDS	 ; КОНЕЦ СЕГМЕНТА КОДА
+    350				     END MAIN	     ; ВЫХОД ИЗ ПРОГРАММЫ
+Turbo Assembler	 Version 4.1	    03/02/20 13:56:19	    Page 8
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "03/02/20"
+??FILENAME			  Text	 "lab3	  "
+??TIME				  Text	 "13:56:19"
+??VERSION			  Number 040A
+@CPU				  Text	 0101H
+@CURSEG				  Text	 CSEG
+@FILENAME			  Text	 LAB3
+@WORDSIZE			  Text	 2
+CELOETXT			  Byte	 DSEG:004D
+COMATXT				  Byte	 DSEG:0010
+DUMP				  Byte	 DSEG:0009
+ENTER_CELOE_PROC		  Near	 CSEG:0183
+ENTER_MSG2_PROC			  Near	 CSEG:0096
+ENTER_MSG_PROC			  Near	 CSEG:008A
+ENTER_OSTATOK_PROC		  Near	 CSEG:018F
+EQUATION1			  Near	 CSEG:0032
+EQUATION1_PROC			  Near	 CSEG:00B2
+EQUATION2			  Near	 CSEG:0054
+EQUATION2_PROC			  Near	 CSEG:00D1
+EQUATION3			  Near	 CSEG:005D
+EQUATION3_PROC			  Near	 CSEG:00E7
+ERRCD				  Byte	 DSEG:000F
+ERRMSG_PROC			  Near	 CSEG:00A2
+ERRTXT				  Byte	 DSEG:0011
+ERR_EXIT			  Near	 CSEG:0086
+EXIT				  Near	 CSEG:015C
+EXIT_POINT			  Near	 CSEG:0089
+FINISH				  Near	 CSEG:007F
+FL				  Byte	 DSEG:0008
+FOR_LOOP			  Near	 CSEG:0134
+INPUT_PROC			  Near	 CSEG:00FB
+M1				  Near	 CSEG:0169
+M2				  Near	 CSEG:0170
+M3				  Near	 CSEG:017D
+MAIN				  Far	 CSEG:0000
+MSG2TXT				  Byte	 DSEG:0043
+MSGTXT				  Byte	 DSEG:0030
+NOT_NEG				  Near	 CSEG:0150
+NO_MINUS			  Near	 CSEG:012C
+OSTATOKTXT			  Byte	 DSEG:0054
+OUTPUT_PROC			  Near	 CSEG:015D
+REZ				  Word	 DSEG:0002
+REZ2				  Word	 DSEG:0004
+SOME_ERR			  Near	 CSEG:0157
+TEMP				  Word	 DSEG:0006
+X				  Word	 DSEG:0000
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+CSEG				  16  019B Para	  Public  CODE
+DSEG				  16  005D Para	  Public  DATA
+STACKSEG			  16  0040 Para	  Stack	  STACK
+
